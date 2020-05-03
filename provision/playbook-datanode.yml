@@ -1,0 +1,43 @@
+---
+- hosts: all
+  become: true
+  tasks:
+
+    - name: Creates directory
+      file:
+        path: /usr/java
+        state: directory
+
+    - name: Unzip JDK
+      unarchive:
+        src: jdk-7u80-linux-x64.tar.gz
+        dest: /usr/java
+
+    - name: Download CDH5 package
+      get_url:
+        url: http://archive.cloudera.com/cdh5/one-click-install/precise/amd64/cdh5-repository_1.0_all.deb
+        dest: /vagrant
+        force_basic_auth: yes
+
+    - name: Install cdh5-repository.deb
+      apt:
+        deb: /vagrant/cdh5-repository_1.0_all.deb
+
+    - name: Add Cloudera repository
+      apt_key:
+        url: http://archive.cloudera.com/cdh5/ubuntu/precise/amd64/cdh/archive.key
+
+    - name: Update apt packages
+      apt:
+        update_cache: yes
+        force_apt_get: yes
+    
+    - name: Install hadoop datanode
+      apt: 
+        name: hadoop-hdfs-datanode
+        state: latest 
+
+    - name: Start HDF service (datanode)
+      service:
+        name: hadoop-hdfs-datanode
+        state: started

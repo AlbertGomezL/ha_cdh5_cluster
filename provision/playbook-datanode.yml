@@ -32,12 +32,15 @@
         update_cache: yes
         force_apt_get: yes
     
-    - name: Install hadoop datanode
+    - name: Install tasktracker
+      apt: 
+        name: hadoop-0.20-mapreduce-tasktracker
+        state: latest
+        update_cache: true
+
+      
+    - name: Install datanode
       apt: 
         name: hadoop-hdfs-datanode
-        state: latest 
-
-    - name: Start HDF service (datanode)
-      service:
-        name: hadoop-hdfs-datanode
-        state: started
+        state: latest
+        update_cache: true

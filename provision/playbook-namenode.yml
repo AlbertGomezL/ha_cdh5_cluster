@@ -3,7 +3,7 @@
   become: true
   tasks:
 
-    - name: Creates directory
+    - name: Creates java directory
       file:
         path: /usr/java
         state: directory
@@ -23,7 +23,7 @@
       apt:
         deb: /vagrant/cdh5-repository_1.0_all.deb
 
-    - name: Add Cloudera repository
+    - name: Add Cloudera repository key
       apt_key:
         url: http://archive.cloudera.com/cdh5/ubuntu/precise/amd64/cdh/archive.key
 
@@ -32,20 +32,44 @@
         update_cache: yes
         force_apt_get: yes
     
-    # - name: Install hadoop namenode
-    #   apt: 
-    #     name: hadoop-hdfs-namenode 
-    #     state: latest 
-
-    - name: Install hadoop
+    - name: Install Zookeeper
       apt: 
-        name: hadoop-0.20-conf-pseudo 
+        name: zookeeper-server
         state: latest 
 
-    - name: Format the file system
-      command: sudo -u hdfs hdfs namenode -format
-    
-    - name: Start HDF service (namenode)
+    - name: Creates zookeeper directory
+      file:
+        path: /var/lib/zookeeper
+        state: directory
+
+    - name: Set permissions
+      command: chown -R zookeeper /var/lib/zookeeper/
+
+    # - name: Change file ownership, group and permissions
+    #   file:
+    #     path: /var/lib/zookeeper/
+    #     owner: foo
+    #     group: foo
+    #     mode: '0644'
+
+    - name: Init zookeeper
+      command: service zookeeper-server init --myid=1 --force
+
+    - name: Start zookeeper service
       service:
-        name: hadoop-hdfs-namenode
+        name: zookeeper-server
         state: started
+
+    - name: Install jobtracker
+      apt: 
+        name: hadoop-0.20-mapreduce-jobtracker
+        state: latest 
+
+    - name: Install namenode
+      apt: 
+        name: hadoop-hdfs-namenode
+        state: latest 
+        
+
+
+

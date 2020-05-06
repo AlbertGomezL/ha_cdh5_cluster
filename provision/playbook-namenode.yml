@@ -63,12 +63,10 @@
     - name: Install jobtracker
       apt: 
         name: hadoop-0.20-mapreduce-jobtracker
-        state: latest 
 
     - name: Install namenode
       apt: 
         name: hadoop-hdfs-namenode
-        state: latest 
         
 
 

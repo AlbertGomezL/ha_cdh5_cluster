@@ -33,7 +33,7 @@
         force_apt_get: yes
     
     - name: Install tasktracker
-      apt: 
+      yum: 
         name: hadoop-0.20-mapreduce-tasktracker
       
     - name: Install datanode

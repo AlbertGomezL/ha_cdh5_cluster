@@ -2,17 +2,45 @@
 - hosts: all
   become: true
   tasks:
-
-    - name: Creates java directory
+        
+    - name: Crear usuario hadoop
+      user:
+        name: hadooop
+        password: '*'
+        state: present
+    
+    - name: Crear directorio ssh
       file:
-        path: /usr/java
+        path: /home/hadoop/.ssh
         state: directory
-
-    - name: Unzip JDK
-      unarchive:
-        src: jdk-7u80-linux-x64.tar.gz
-        dest: /usr/java
-
+        
+    - name: Configurar clave privada
+      copy:
+        src: clave_hadoop
+        dest: /home/hadoop/.ssh/id_rsa
+          
+    - name: Update APT package manager repositories cache
+      apt:
+        update_cache: yes
+        
+    - name: Install required packages
+      apt:
+        update_cache: yes
+        name: "{{ packages }}"
+        state: present
+      vars:
+        packages:
+          - openjdk-7-jre-headless
+          - openssh-client
+          - rsync
+          - wget
+          - sshpass
+         
+    - name: Configurar hosts
+      copy:
+        src: hosts
+        dest: /etc/hosts
+        
     - name: Download CDH5 package
       get_url:
         url: http://archive.cloudera.com/cdh5/one-click-install/precise/amd64/cdh5-repository_1.0_all.deb
@@ -31,7 +59,7 @@
       apt:
         update_cache: yes
         force_apt_get: yes
-    
+            
     - name: Install Zookeeper
       apt: 
         name: zookeeper-server
@@ -45,16 +73,9 @@
     - name: Set permissions
       command: chown -R zookeeper /var/lib/zookeeper/
 
-    # - name: Change file ownership, group and permissions
-    #   file:
-    #     path: /var/lib/zookeeper/
-    #     owner: foo
-    #     group: foo
-    #     mode: '0644'
-
     - name: Init zookeeper
       command: service zookeeper-server init --myid=1 --force
-
+      
     - name: Start zookeeper service
       service:
         name: zookeeper-server
@@ -63,13 +84,7 @@
     - name: Install jobtracker
       apt: 
         name: hadoop-0.20-mapreduce-jobtracker
-        state: latest 
 
     - name: Install namenode
       apt: 
-        name: hadoop-hdfs-namenode
-        state: latest 
-        
-
-
-
+        name: hadoop-hdfs-namenode      

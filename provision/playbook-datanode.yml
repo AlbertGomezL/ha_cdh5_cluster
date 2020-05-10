@@ -2,17 +2,45 @@
 - hosts: all
   become: true
   tasks:
-
-    - name: Creates directory
+        
+    - name: Crear usuario hadoop
+      user:
+        name: hadooop
+        password: '*'
+        state: present
+    
+    - name: Crear directorio ssh
       file:
-        path: /usr/java
+        path: /home/hadoop/.ssh
         state: directory
-
-    - name: Unzip JDK
-      unarchive:
-        src: jdk-7u80-linux-x64.tar.gz
-        dest: /usr/java
-
+        
+    - name: Configurar clave publica
+      copy:
+        src: clave_hadoop.pub
+        dest: /home/hadoop/.ssh/authorized_keys
+          
+    - name: Update APT package manager repositories cache
+      apt:
+        update_cache: yes
+        
+    - name: Install required packages
+      apt:
+        update_cache: yes
+        name: "{{ packages }}"
+        state: present
+      vars:
+        packages:
+          - openjdk-7-jre-headless
+          - openssh-client
+          - rsync
+          - wget
+          - sshpass
+         
+    - name: Configurar hosts
+      copy:
+        src: hosts
+        dest: /etc/hosts
+        
     - name: Download CDH5 package
       get_url:
         url: http://archive.cloudera.com/cdh5/one-click-install/precise/amd64/cdh5-repository_1.0_all.deb
@@ -23,7 +51,7 @@
       apt:
         deb: /vagrant/cdh5-repository_1.0_all.deb
 
-    - name: Add Cloudera repository
+    - name: Add Cloudera repository key
       apt_key:
         url: http://archive.cloudera.com/cdh5/ubuntu/precise/amd64/cdh/archive.key
 
@@ -31,16 +59,12 @@
       apt:
         update_cache: yes
         force_apt_get: yes
-    
+            
     - name: Install tasktracker
-      apt: 
+      yum: 
         name: hadoop-0.20-mapreduce-tasktracker
-        state: latest
-        update_cache: true
 
-      
     - name: Install datanode
       apt: 
         name: hadoop-hdfs-datanode
-        state: latest
-        update_cache: true
+

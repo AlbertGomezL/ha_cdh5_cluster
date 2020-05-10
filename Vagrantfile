@@ -14,15 +14,15 @@ Vagrant.configure("2") do |config|
   end
   
   
-  config.vm.define "datanode1" do |node|
-      config.vm.box = "hashicorp/precise64"
-      node.vm.hostname = "datanode1"
-      node.vm.network "private_network", ip: "10.0.0.13", virtualbox__intnet: "network"
-      node.vm.provision "ansible" do |ansible|
-        ansible.verbose = "v"
-        ansible.playbook = "provision/playbook-datanode.yml"
-      end
-  end
+  # config.vm.define "datanode1" do |node|
+  #     config.vm.box = "hashicorp/precise64"
+  #     node.vm.hostname = "datanode1"
+  #     node.vm.network "private_network", ip: "10.0.0.13", virtualbox__intnet: "network"
+  #     node.vm.provision "ansible" do |ansible|
+  #       ansible.verbose = "v"
+  #       ansible.playbook = "provision/playbook-datanode.yml"
+  #     end
+  # end
 
   # config.vm.define "namenode2" do |node|
   #   config.vm.box = "hashicorp/precise64"

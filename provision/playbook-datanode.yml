@@ -11,13 +11,13 @@
     
     - name: Crear directorio ssh
       file:
-        path: /home/hadoop/.ssh
+        path: /home/vagrant/.ssh
         state: directory
         
     - name: Configurar clave publica
       copy:
         src: clave_hadoop.pub
-        dest: /home/hadoop/.ssh/authorized_keys
+        dest: /home/vagrant/.ssh/authorized_keys
           
     - name: Update APT package manager repositories cache
       apt:
@@ -59,6 +59,26 @@
       apt:
         update_cache: yes
         force_apt_get: yes
+      
+    - name: Add hadoop to the path
+      lineinfile:
+        path: /home/vagrant/.profile
+        line: PATH=/usr/lib/hadoop/bin:/usr/lib/hadoop/sbin:$PATH
+        create: yes
+        
+    - name: Add hadoop to the shell path
+      blockinfile:
+        path: /home/vagrant/.bashrc
+        block: |
+          export HADOOP_HOME=/usr/lib/hadoop
+          export PATH=${PATH}:${HADOOP_HOME}/bin:${HADOOP_HOME}/sbin
+        create: yes
+
+    - name: Set java home
+      lineinfile:
+        path: /home/vagrant/etc/hadoop/hadoop-env.sh
+        line: export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64/jre
+        create: yes
             
     - name: Install tasktracker
       yum: 
@@ -67,4 +87,116 @@
     - name: Install datanode
       apt: 
         name: hadoop-hdfs-datanode
+        
+    - name: Set namenode location
+      blockinfile:
+        path: /etc/hadoop/conf/core-site.xml
+        block: |
+            <property>
+              <name>fs.default.name</name>
+              <value>hdfs://namenode:9000</value>
+            </property>
+        insertbefore: </configuration>
+
+    - name: Set path for HDFS
+      blockinfile:
+        path: /etc/hadoop/conf/hdfs-site.xml
+        block: |
+          <property>
+            <name>dfs.namenode.name.dir</name>
+            <value>/home/vagrant/data/nameNode</value>
+          </property>
+          <property>
+            <name>dfs.datanode.data.dir</name>
+            <value>/home/vagrant/data/dataNode</value>
+          </property>
+          <property>
+            <name>dfs.replication</name>
+            <value>1</value>
+          </property>
+        insertbefore: </configuration>
+
+    - name: Set yarn as job scheduler
+      blockinfile:
+        path: /etc/hadoop/conf/mapred-site.xml
+        block: |
+          <property>
+            <name>mapreduce.framework.name</name>
+            <value>yarn</value>
+          </property>
+          <property>
+            <name>yarn.app.mapreduce.am.env</name>
+            <value>HADOOP_MAPRED_HOME=$HADOOP_HOME</value>
+          </property>
+          <property>
+            <name>mapreduce.map.env</name>
+            <value>HADOOP_MAPRED_HOME=$HADOOP_HOME</value>
+          </property>
+          <property>
+            <name>mapreduce.reduce.env</name>
+            <value>HADOOP_MAPRED_HOME=$HADOOP_HOME</value>
+          </property>
+          <property>
+            <name>yarn.app.mapreduce.am.resource.mb</name>
+            <value>512</value>
+          </property>
+          <property>
+            <name>mapreduce.map.memory.mb</name>
+            <value>256</value>
+          </property>
+          <property>
+            <name>mapreduce.reduce.memory.mb</name>
+            <value>256</value>
+          </property>
+        insertbefore: </configuration>
+
+    - name: Configure yarn
+      blockinfile:
+        path: /etc/hadoop/conf/yarn-site.xml
+        block: |
+          <property>
+            <name>yarn.acl.enable</name>
+            <value>0</value>
+          </property>
+          <property>
+            <name>yarn.resourcemanager.hostname</name>
+            <value>10.0.0.11</value>
+          </property>
+          <property>
+            <name>yarn.nodemanager.aux-services</name>
+            <value>mapreduce_shuffle</value>
+          </property>
+          <property>
+            <name>yarn.nodemanager.resource.memory-mb</name>
+            <value>1536</value>
+          </property>
+          <property>
+            <name>yarn.scheduler.maximum-allocation-mb</name>
+            <value>1536</value>
+          </property>
+          <property>
+            <name>yarn.scheduler.minimum-allocation-mb</name>
+            <value>128</value>
+          </property>
+          <property>
+            <name>yarn.nodemanager.vmem-check-enabled</name>
+            <value>false</value>
+          </property>
+        insertbefore: </configuration>
+
+    - name: Configure workers
+      lineinfile:
+        path: /etc/hadoop/conf/workers
+        line: "{{ item }}"
+        create: yes
+      with_items:
+        - datanode1
+        - datanode2
+        
+    - name: Set permissions to hadoop directory
+      file:
+        path: /etc/hadoop
+        state: directory
+        mode: 0777
+        recurse: yes
 

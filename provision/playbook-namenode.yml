@@ -107,9 +107,9 @@
         name: zookeeper-server
         state: started
 
-  #  - name: Install jobtracker
-  #    apt: 
-  #      name: hadoop-0.20-mapreduce-jobtracker
+    - name: Install jobtracker
+      apt: 
+        name: hadoop-0.20-mapreduce-jobtracker
 
     - name: Install hadoop needed packages
       apt: 

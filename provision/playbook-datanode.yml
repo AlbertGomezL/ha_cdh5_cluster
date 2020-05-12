@@ -81,10 +81,31 @@
         path: /home/vagrant/etc/hadoop/hadoop-env.sh
         line: export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64
         create: yes
-            
-   # - name: Install tasktracker
-   #   yum: 
-   #     name: hadoop-0.20-mapreduce-tasktracker
+    
+    - name: Install Zookeeper
+      apt: 
+        name: zookeeper-server
+        state: latest 
+
+    - name: Creates zookeeper directory
+      file:
+        path: /var/lib/zookeeper
+        state: directory
+
+    - name: Set permissions
+      command: chown -R zookeeper /var/lib/zookeeper/
+
+    - name: Init zookeeper
+      command: service zookeeper-server init --myid=1 --force
+      
+    - name: Start zookeeper service
+      service:
+        name: zookeeper-server
+        state: started
+
+    - name: Install tasktracker
+      yum: 
+        name: hadoop-0.20-mapreduce-tasktracker
 
     - name: Install hadoop needed packages
       apt: 

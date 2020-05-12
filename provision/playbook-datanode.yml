@@ -72,21 +72,23 @@
         block: |
           export HADOOP_HOME=/usr/lib/hadoop
           export PATH=${PATH}:${HADOOP_HOME}/bin:${HADOOP_HOME}/sbin
+          export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64
+          export HADOOP_LIBEXEC_DIR=${HADOOP_HOME}/libexec
         create: yes
 
     - name: Set java home
       lineinfile:
         path: /home/vagrant/etc/hadoop/hadoop-env.sh
-        line: export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64/jre
+        line: export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64
         create: yes
             
-    - name: Install tasktracker
-      yum: 
-        name: hadoop-0.20-mapreduce-tasktracker
+   # - name: Install tasktracker
+   #   yum: 
+   #     name: hadoop-0.20-mapreduce-tasktracker
 
-    - name: Install datanode
+    - name: Install hadoop needed packages
       apt: 
-        name: hadoop-hdfs-datanode
+        name: ['hadoop-hdfs-datanode', 'hadoop-yarn-nodemanager', 'hadoop-mapreduce', 'hadoop-hdfs-secondarynamenode', 'hadoop-yarn-resourcemanager', 'hadoop-client']
         
     - name: Set namenode location
       blockinfile:
@@ -183,19 +185,17 @@
             <value>false</value>
           </property>
         insertbefore: </configuration>
-
-    - name: Configure workers
-      lineinfile:
-        path: /etc/hadoop/conf/workers
-        line: "{{ item }}"
-        create: yes
-      with_items:
-        - datanode1
-        - datanode2
         
     - name: Set permissions to hadoop directory
       file:
         path: /etc/hadoop
+        state: directory
+        mode: 0777
+        recurse: yes
+        
+    - name: Set permissions to hadoop lib directory
+      file:
+        path: /usr/lib/hadoop
         state: directory
         mode: 0777
         recurse: yes

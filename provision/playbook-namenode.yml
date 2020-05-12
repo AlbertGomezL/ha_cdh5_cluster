@@ -72,12 +72,18 @@
         block: |
           export HADOOP_HOME=/usr/lib/hadoop
           export PATH=${PATH}:${HADOOP_HOME}/bin:${HADOOP_HOME}/sbin
+          export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64
+          export HADOOP_LIBEXEC_DIR=${HADOOP_HOME}/libexec
+          export $HADOOP_PREFIX=${HADOOP_HOME}
+          export $HADOOP_CONF_DIR=/etc/hadoop/conf
+          export $HADOOP_YARN_HOME=/usr/lib/hadoop-yarn
+          export $HADOOP_MAPREDUCE=/usr/lib/hadoop-mapreduce
         create: yes
 
     - name: Set java home
       lineinfile:
         path: /home/vagrant/etc/hadoop/hadoop-env.sh
-        line: export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64/jre
+        line: export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64/
         create: yes
 
     - name: Install Zookeeper
@@ -101,13 +107,13 @@
         name: zookeeper-server
         state: started
 
-    - name: Install jobtracker
-      apt: 
-        name: hadoop-0.20-mapreduce-jobtracker
+  #  - name: Install jobtracker
+  #    apt: 
+  #      name: hadoop-0.20-mapreduce-jobtracker
 
-    - name: Install namenode
+    - name: Install hadoop needed packages
       apt: 
-        name: hadoop-hdfs-namenode      
+        name: ['hadoop-hdfs-namenode', 'hadoop-mapreduce-historyserver', 'hadoop-yarn-proxyserver', 'hadoop-client']
 
     - name: Set namenode location
       blockinfile:
@@ -204,19 +210,27 @@
             <value>false</value>
           </property>
         insertbefore: </configuration>
-
-    - name: Configure workers
+        
+    - name: Configure slaves
       lineinfile:
-        path: /etc/hadoop/conf/workers
+        path: /etc/hadoop/conf/slaves
         line: "{{ item }}"
         create: yes
       with_items:
+        - namenode
         - datanode1
         - datanode2
         
     - name: Set permissions to hadoop directory
       file:
         path: /etc/hadoop
+        state: directory
+        mode: 0777
+        recurse: yes
+        
+    - name: Set permissions to hadoop lib directory
+      file:
+        path: /usr/lib/hadoop
         state: directory
         mode: 0777
         recurse: yes

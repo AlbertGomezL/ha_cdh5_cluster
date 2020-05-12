@@ -2,17 +2,45 @@
 - hosts: all
   become: true
   tasks:
-
-    - name: Creates java directory
+        
+    - name: Crear usuario hadoop
+      user:
+        name: hadoop
+        password: '*'
+        state: present
+    
+    - name: Crear directorio ssh
       file:
-        path: /usr/java
+        path: /home/vagrant/.ssh
         state: directory
-
-    - name: Unzip JDK
-      unarchive:
-        src: jdk-7u80-linux-x64.tar.gz
-        dest: /usr/java
-
+        
+    - name: Configurar clave privada
+      copy:
+        src: clave_hadoop
+        dest: /home/vagrant/.ssh/id_rsa
+          
+    - name: Update APT package manager repositories cache
+      apt:
+        update_cache: yes
+        
+    - name: Install required packages
+      apt:
+        update_cache: yes
+        name: "{{ packages }}"
+        state: present
+      vars:
+        packages:
+          - openjdk-7-jre-headless
+          - openssh-client
+          - rsync
+          - wget
+          - sshpass
+         
+    - name: Configurar hosts
+      copy:
+        src: hosts
+        dest: /etc/hosts
+        
     - name: Download CDH5 package
       get_url:
         url: http://archive.cloudera.com/cdh5/one-click-install/precise/amd64/cdh5-repository_1.0_all.deb
@@ -31,7 +59,33 @@
       apt:
         update_cache: yes
         force_apt_get: yes
-    
+
+    - name: Add hadoop to the path
+      lineinfile:
+        path: /home/vagrant/.profile
+        line: PATH=/usr/lib/hadoop/bin:/usr/lib/hadoop/sbin:$PATH
+        create: yes
+        
+    - name: Add hadoop to the shell path
+      blockinfile:
+        path: /home/vagrant/.bashrc
+        block: |
+          export HADOOP_HOME=/usr/lib/hadoop
+          export PATH=${PATH}:${HADOOP_HOME}/bin:${HADOOP_HOME}/sbin
+          export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64
+          export HADOOP_LIBEXEC_DIR=${HADOOP_HOME}/libexec
+          export $HADOOP_PREFIX=${HADOOP_HOME}
+          export $HADOOP_CONF_DIR=/etc/hadoop/conf
+          export $HADOOP_YARN_HOME=/usr/lib/hadoop-yarn
+          export $HADOOP_MAPREDUCE=/usr/lib/hadoop-mapreduce
+        create: yes
+
+    - name: Set java home
+      lineinfile:
+        path: /home/vagrant/etc/hadoop/hadoop-env.sh
+        line: export JAVA_HOME=/usr/lib/jvm/java-7-openjdk-amd64/
+        create: yes
+
     - name: Install Zookeeper
       apt: 
         name: zookeeper-server
@@ -45,16 +99,9 @@
     - name: Set permissions
       command: chown -R zookeeper /var/lib/zookeeper/
 
-    # - name: Change file ownership, group and permissions
-    #   file:
-    #     path: /var/lib/zookeeper/
-    #     owner: foo
-    #     group: foo
-    #     mode: '0644'
-
     - name: Init zookeeper
       command: service zookeeper-server init --myid=1 --force
-
+      
     - name: Start zookeeper service
       service:
         name: zookeeper-server
@@ -64,10 +111,130 @@
       apt: 
         name: hadoop-0.20-mapreduce-jobtracker
 
-    - name: Install namenode
+    - name: Install hadoop needed packages
       apt: 
-        name: hadoop-hdfs-namenode
+        name: ['hadoop-hdfs-namenode', 'hadoop-mapreduce-historyserver', 'hadoop-yarn-proxyserver', 'hadoop-client']
+
+    - name: Set namenode location
+      blockinfile:
+        path: /etc/hadoop/conf/core-site.xml
+        block: |
+            <property>
+              <name>fs.default.name</name>
+              <value>hdfs://namenode:9000</value>
+            </property>
+        insertbefore: </configuration>
+
+    - name: Set path for HDFS
+      blockinfile:
+        path: /etc/hadoop/conf/hdfs-site.xml
+        block: |
+          <property>
+            <name>dfs.namenode.name.dir</name>
+            <value>/home/vagrant/data/nameNode</value>
+          </property>
+          <property>
+            <name>dfs.datanode.data.dir</name>
+            <value>/home/vagrant/data/dataNode</value>
+          </property>
+          <property>
+            <name>dfs.replication</name>
+            <value>1</value>
+          </property>
+        insertbefore: </configuration>
+
+    - name: Set yarn as job scheduler
+      blockinfile:
+        path: /etc/hadoop/conf/mapred-site.xml
+        block: |
+          <property>
+            <name>mapreduce.framework.name</name>
+            <value>yarn</value>
+          </property>
+          <property>
+            <name>yarn.app.mapreduce.am.env</name>
+            <value>HADOOP_MAPRED_HOME=$HADOOP_HOME</value>
+          </property>
+          <property>
+            <name>mapreduce.map.env</name>
+            <value>HADOOP_MAPRED_HOME=$HADOOP_HOME</value>
+          </property>
+          <property>
+            <name>mapreduce.reduce.env</name>
+            <value>HADOOP_MAPRED_HOME=$HADOOP_HOME</value>
+          </property>
+          <property>
+            <name>yarn.app.mapreduce.am.resource.mb</name>
+            <value>512</value>
+          </property>
+          <property>
+            <name>mapreduce.map.memory.mb</name>
+            <value>256</value>
+          </property>
+          <property>
+            <name>mapreduce.reduce.memory.mb</name>
+            <value>256</value>
+          </property>
+        insertbefore: </configuration>
+
+    - name: Configure yarn
+      blockinfile:
+        path: /etc/hadoop/conf/yarn-site.xml
+        block: |
+          <property>
+            <name>yarn.acl.enable</name>
+            <value>0</value>
+          </property>
+          <property>
+            <name>yarn.resourcemanager.hostname</name>
+            <value>10.0.0.11</value>
+          </property>
+          <property>
+            <name>yarn.nodemanager.aux-services</name>
+            <value>mapreduce_shuffle</value>
+          </property>
+          <property>
+            <name>yarn.nodemanager.resource.memory-mb</name>
+            <value>1536</value>
+          </property>
+          <property>
+            <name>yarn.scheduler.maximum-allocation-mb</name>
+            <value>1536</value>
+          </property>
+          <property>
+            <name>yarn.scheduler.minimum-allocation-mb</name>
+            <value>128</value>
+          </property>
+          <property>
+            <name>yarn.nodemanager.vmem-check-enabled</name>
+            <value>false</value>
+          </property>
+        insertbefore: </configuration>
         
-
-
+    - name: Configure slaves
+      lineinfile:
+        path: /etc/hadoop/conf/slaves
+        line: "{{ item }}"
+        create: yes
+      with_items:
+        - namenode
+        - datanode1
+        - datanode2
+        
+    - name: Set permissions to hadoop directory
+      file:
+        path: /etc/hadoop
+        state: directory
+        mode: 0777
+        recurse: yes
+        
+    - name: Set permissions to hadoop lib directory
+      file:
+        path: /usr/lib/hadoop
+        state: directory
+        mode: 0777
+        recurse: yes
+        
+    - name: Format namenode
+      command: hdfs namenode -format
 

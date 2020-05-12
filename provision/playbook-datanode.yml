@@ -103,13 +103,9 @@
         name: zookeeper-server
         state: started
 
-    - name: Install tasktracker
-      yum: 
-        name: hadoop-0.20-mapreduce-tasktracker
-
     - name: Install hadoop needed packages
       apt: 
-        name: ['hadoop-hdfs-datanode', 'hadoop-yarn-nodemanager', 'hadoop-mapreduce', 'hadoop-hdfs-secondarynamenode', 'hadoop-yarn-resourcemanager', 'hadoop-client']
+        name: ['hadoop-hdfs-datanode', 'hadoop-yarn-nodemanager', 'hadoop-mapreduce', 'hadoop-yarn-resourcemanager', 'hadoop-client']
         
     - name: Set namenode location
       blockinfile:

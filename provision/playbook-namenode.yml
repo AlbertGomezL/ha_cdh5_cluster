@@ -107,10 +107,6 @@
         name: zookeeper-server
         state: started
 
-    - name: Install jobtracker
-      apt: 
-        name: hadoop-0.20-mapreduce-jobtracker
-
     - name: Install hadoop needed packages
       apt: 
         name: ['hadoop-hdfs-namenode', 'hadoop-mapreduce-historyserver', 'hadoop-yarn-proxyserver', 'hadoop-client']
@@ -218,8 +214,8 @@
         create: yes
       with_items:
         - namenode
-        - datanode1
-        - datanode2
+        - namenode2
+        - datanode
         
     - name: Set permissions to hadoop directory
       file:
